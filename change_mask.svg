@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="100%" height="100%">
+  <!-- Dark Grayscale Context Background -->
+  <rect width="800" height="600" fill="#0f172a"/>
+  
+  <!-- Unchanged Regions in Dark Gray -->
+  <polygon points="100,100 350,80 380,300 80,320" fill="#1e293b" stroke="#334155" stroke-dasharray="2,4"/>
+  <polygon points="420,120 720,100 750,350 400,380" fill="#1e293b" stroke="#334155" stroke-dasharray="2,4"/>
+
+  <!-- HIGHLIGHTED DETECTED CHANGE POLYGON (Bright Red / Orange Overlay) -->
+  <polygon points="200,350 600,380 580,550 150,520" fill="#ef4444" opacity="0.65" stroke="#f43f5e" stroke-width="3"/>
+  <polygon points="100,100 350,80 380,300 80,320" fill="#eab308" opacity="0.3" stroke="#eab308" stroke-width="1.5"/>
+
+  <!-- Change Bounding Box Annotation -->
+  <rect x="140" y="340" width="470" height="220" fill="none" stroke="#38bdf8" stroke-width="2" stroke-dasharray="6,6"/>
+  <rect x="140" y="315" width="180" height="25" fill="#38bdf8" rx="2"/>
+  <text x="148" y="332" fill="#0f172a" font-family="sans-serif" font-size="11" font-weight="bold">CHANGE DETECTED (+38.4%)</text>
+
+  <!-- Water River -->
+  <path d="M 0 250 Q 400 200 800 280 L 800 330 Q 400 250 0 300 Z" fill="#0284c7" opacity="0.5"/>
+
+  <!-- Metadata Stamp -->
+  <rect x="15" y="15" width="260" height="42" fill="#0f172a" opacity="0.9" rx="4"/>
+  <text x="25" y="32" fill="#ef4444" font-family="monospace" font-size="11" font-weight="bold">BI-TEMPORAL CHANGE MAP MASK</text>
+  <text x="25" y="48" fill="#94a3b8" font-family="monospace" font-size="10">CONFIDENCE: 91.2% | ALGORITHM: RS-CD-02</text>
+</svg>

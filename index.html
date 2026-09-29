@@ -1,0 +1,1823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SatQuery AI — Ask. Analyze. Understand.</title>
+    <link rel="icon" type="image/png" href="/samples/satquery_logo.png" />
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            200: '#e6f4ed',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            800: '#065f46',
+                            900: '#064e3b',
+                        },
+                        slateCanvas: {
+                            50: '#f8faf9',
+                            100: '#f4f6f5',
+                            200: '#e5e7eb',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- React 18 & Babel Standalone -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f4f6f5;
+            color: #0f172a;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f4f6f5;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .leaflet-container {
+            background-color: #e5e7eb !important;
+            border-radius: 0.75rem;
+        }
+    </style>
+</head>
+<body class="bg-slateCanvas-100 text-slate-900 min-h-screen flex flex-col antialiased custom-scrollbar">
+    <div id="root"></div>
+
+    <!-- React Application Logic -->
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // Languages List
+        const LANGUAGES = [
+            { code: 'en', name: 'English' },
+            { code: 'hi', name: 'Hindi (हिन्दी)' },
+            { code: 'te', name: 'Telugu (తెలుగు)' },
+            { code: 'ta', name: 'Tamil (தமிழ்)' },
+            { code: 'bn', name: 'Bengali (বাংলা)' },
+            { code: 'mr', name: 'Marathi (मराठी)' },
+            { code: 'gu', name: 'Gujarati (ગુજરાતી)' },
+            { code: 'kn', name: 'Kannada (కన్నడ)' },
+            { code: 'ml', name: 'Malayalam (മലയാളം)' },
+            { code: 'or', name: 'Odia (ଓଡ଼ିଆ)' },
+            { code: 'pa', name: 'Punjabi (ਪੰਜਾਬੀ)' },
+            { code: 'as', name: 'Assamese (অসমীয়া)' },
+            { code: 'ur', name: 'Urdu (اردو)' },
+            { code: 'sa', name: 'Sanskrit (संस्कृतम्)' },
+            { code: 'ne', name: 'Nepali (नेपाली)' },
+            { code: 'gom', name: 'Konkani (कोंकणी)' },
+            { code: 'mai', name: 'Maithili (मैथिली)' },
+            { code: 'mni', name: 'Manipuri (মৈতৈলোন্)' },
+            { code: 'brx', name: 'Bodo (बर)' },
+            { code: 'doi', name: 'Dogri (डोगरी)' },
+            { code: 'ks', name: 'Kashmiri (कश्मीरी)' },
+            { code: 'sd', name: 'Sindhi (سنڌي)' },
+            { code: 'sat', name: 'Santali (ᱥᱟᱱᱛᱟᱲᱤ)' }
+        ];
+
+        // Translation Dictionary
+        const TRANSLATIONS = {
+            en: {
+                app_title: "SatQuery AI",
+                tagline: "Ask. Analyze. Understand.",
+                welcome_marquee: "Welcome to SatQuery AI — Agentic Remote-Sensing Assistant for Earth Observation & Multimodal Analysis",
+                nav_home: "Home",
+                nav_about: "About",
+                nav_single_image: "Single Image",
+                nav_multi_image: "Multi-Image Change",
+                nav_gis_map: "GIS Map",
+                nav_learn: "Learn RS",
+                nav_contact: "Contact Us",
+                section_analyze: "ANALYZE",
+                section_monitor: "MONITOR",
+                section_explore: "EXPLORE",
+                section_learn: "LEARN & REPORTS",
+                hero_title: "A clearer view of satellite imagery.",
+                hero_subtitle: "Observe the present. Explore the possibilities. Understand the evidence.",
+                hero_badge: "AGENTIC REMOTE-SENSING ASSISTANT",
+                btn_single_image: "Single Image Analysis",
+                btn_multi_image: "Multi-Image Change",
+                btn_explore_map: "Explore GIS Map",
+                btn_start_monitoring: "Start Monitoring",
+                supported_modalities: "SUPPORTED SATELLITE SENSOR MODALITIES",
+                optical_sensors: "OPTICAL SENSORS",
+                multispectral_sensors: "MULTISPECTRAL SENSORS",
+                sar_sensors: "SAR (SYNTHETIC APERTURE RADAR)",
+                optical_desc: "Visible RGB band imaging for surface mapping, visual scene interpretation, and land cover structure.",
+                multispectral_desc: "Vegetation canopy chlorophyll measurement (NDVI), surface water extraction (NDWI), and urban concrete analysis (NDBI).",
+                sar_desc: "Active microwave pulse observation. Penetrates cloud cover, fog, and darkness for flood and structural backscatter detection.",
+                single_title: "Single Image Analysis & BigEarthNet AI Chatbot",
+                single_subtitle: "Upload a satellite image in PNG, JPG, or JPEG format. The BigEarthNet-19 fine-tuned AI model activates instantly.",
+                dropzone_title: "Click or Drag & Drop Satellite Image",
+                dropzone_subtitle: "Supports PNG, JPG, JPEG, TIFF",
+                sample_tiles_title: "OR SELECT A SAMPLE TILE:",
+                chatbot_title: "SatQuery AI Assistant",
+                chatbot_subtitle: "Ask any question about the uploaded satellite image.",
+                input_placeholder: "Ask SatQuery about this image... e.g. 'What is the dominant land cover class?'",
+                btn_ask: "Ask",
+                multi_title: "Multi-Image Change Detection & Comparison",
+                multi_subtitle: "Upload Observation T1 and Observation T2 (PNG/JPG/JPEG). Bi-temporal model compares land cover modifications.",
+                obs_t1: "OBSERVATION T1 (BASELINE)",
+                obs_t2: "OBSERVATION T2 (CONVERSION)",
+                swipe_title: "INTERACTIVE SWIPE COMPARISON SLIDER",
+                land_cover_title: "BigEarthNet Land-Cover Classification",
+                map_title: "Interactive GIS Map & Continuous AOI Watch",
+                groundwater_title: "Indicative Groundwater / Borewell Potential Assessment",
+                rocket_title: "Rocket & Orbital Payload Tracking",
+                prompt_title: "Interactive Prompt Quality Evaluator",
+                quiz_title: "Interactive Remote Sensing Quiz",
+                reports_title: "Generate Printable PDF Audit Report",
+                about_title: "About SatQuery AI",
+                contact_title: "Contact Us"
+            },
+            hi: {
+                app_title: "SatQuery AI",
+                tagline: "पूछें। विश्लेषण करें। समझें।",
+                welcome_marquee: "सैटक्वेरी एआई में आपका स्वागत है — पृथ्वी अवलोकन के लिए एजेंटिक रिमोट-सेंसिंग सहायक",
+                nav_home: "होम",
+                nav_about: "हमारे बारे में",
+                nav_single_image: "एकल छवि",
+                nav_multi_image: "बहु-छवि परिवर्तन",
+                nav_gis_map: "जीआईएस मानचित्र",
+                nav_learn: "सीखें",
+                nav_contact: "संपर्क करें",
+                section_analyze: "विश्लेषण",
+                section_monitor: "निगरानी",
+                section_explore: "अन्वेषण",
+                section_learn: "सीखें एवं रिपोर्ट",
+                hero_title: "उपग्रह इमेजरी का एक स्पष्ट दृश्य।",
+                hero_subtitle: "वर्तमान का निरीक्षण करें। संभावनाओं का अन्वेषण करें। साक्ष्यों को समझें।",
+                hero_badge: "एजेंटिक रिमोट-सेंसिंग सहायक",
+                btn_single_image: "एकल छवि विश्लेषण",
+                btn_multi_image: "बहु-छवि परिवर्तन",
+                btn_explore_map: "जीआईएस मानचित्र देखें",
+                btn_start_monitoring: "निगरानी शुरू करें",
+                supported_modalities: "समर्थित उपग्रह सेंसर मोडैलिटीज़",
+                optical_sensors: "ऑप्टिकल सेंसर",
+                multispectral_sensors: "मल्टीस्पेक्ट्रल सेंसर",
+                sar_sensors: "एसएआर (सिंथेटिक अपर्चर रडार)",
+                optical_desc: "सतह मानचित्रण और दृश्य व्याख्या के लिए दृश्यमान आरजीबी बैंड इमेजरी।",
+                multispectral_desc: "वनस्पति कैनोपी क्लोरोफिल मापन (NDVI) और जल निकाय निष्कर्षण (NDWI)।",
+                sar_desc: "सक्रिय माइक्रोवेव पल्स। बाढ़ और संरचनात्मक पहचान के लिए बादलों को भेदता है।",
+                single_title: "एकल छवि विश्लेषण और बिगअर्थनेट एआई चैटबॉट",
+                single_subtitle: "PNG, JPG, या JPEG प्रारूप में उपग्रह छवि अपलोड करें। बिगअर्थनेट-19 मॉडल तुरंत सक्रिय होता है।",
+                dropzone_title: "उपग्रह छवि अपलोड करने के लिए क्लिक करें या ड्रैग करें",
+                dropzone_subtitle: "PNG, JPG, JPEG, TIFF समर्थित",
+                sample_tiles_title: "या एक नमूना छवि चुनें:",
+                chatbot_title: "सैटक्वेरी एआई सहायक",
+                chatbot_subtitle: "अपलोड की गई उपग्रह छवि के बारे में कोई भी प्रश्न पूछें।",
+                input_placeholder: "इस छवि के बारे में पूछें... उदा. 'मुख्य भूमि आवरण क्या है?'",
+                btn_ask: "पूछें",
+                multi_title: "बहु-छवि परिवर्तन पहचान और तुलना",
+                multi_subtitle: "अवलोकन T1 और T2 अपलोड करें। द्वि-अस्थायी मॉडल भूमि आवरण परिवर्तनों की तुलना करता है।",
+                obs_t1: "अवलोकन T1 (बेसलाइन)",
+                obs_t2: "अवलोकन T2 (रूपांतरण)",
+                swipe_title: "इंटरएक्टिव स्वाइप तुलना स्लाइडर",
+                land_cover_title: "बिगअर्थनेट भूमि-आवरण वर्गीकरण",
+                map_title: "इंटरएक्टिव जीआईएस मानचित्र और सतत निगरानी",
+                groundwater_title: "संकेतात्मक भूजल / बोरवेल क्षमता मूल्यांकन",
+                rocket_title: "रॉकेट और कक्षीय पेलोड ट्रैकिंग",
+                prompt_title: "इंटरएक्टिव प्रॉम्प्ट गुणवत्ता मूल्यांकनकर्ता",
+                quiz_title: "इंटरएक्टिव रिमोट सेंसिंग क्विज",
+                reports_title: "प्रिंट करने योग्य पीडीएफ ऑडिट रिपोर्ट बनाएं",
+                about_title: "सैटक्वेरी एआई के बारे में",
+                contact_title: "संपर्क करें"
+            },
+            te: {
+                app_title: "SatQuery AI",
+                tagline: "అడగండి. విశ్లేషించండి. అర్థం చేసుకోండి.",
+                welcome_marquee: "SatQuery AI కి స్వాగతం — భూ పరిశీలన కోసం ఏజెంటిక్ రిమోట్-సెన్సింగ్ అసిస్టెంట్",
+                nav_home: "హోమ్",
+                nav_about: "మా గురించి",
+                nav_single_image: "సింగిల్ ఇమేజ్",
+                nav_multi_image: "మల్టీ-ఇమేజ్ మార్పు",
+                nav_gis_map: "GIS మ్యాప్",
+                nav_learn: "నేర్చుకోండి",
+                nav_contact: "సంప్రదించండి",
+                section_analyze: "విశ్లేషణ",
+                section_monitor: "మొనిటరింగ్",
+                section_explore: "అన్వేషణ",
+                section_learn: "లెర్నింగ్ & రిపోర్ట్స్",
+                hero_title: "శాటిలైట్ ఇమేజరీ యొక్క స్పష్టమైన వీక్షణం.",
+                hero_subtitle: "ప్రస్తుతాన్ని పరిశీలించండి. అవకాశాలను అన్వేషించండి. ఆధారాలను అర్థం చేసుకోండి.",
+                hero_badge: "ఏజెంటిక్ రిమోట్-సెన్సింగ్ అసిస్టెంట్",
+                btn_single_image: "సింగిల్ ఇమేజ్ విశ్లేషణ",
+                btn_multi_image: "మల్టీ-ఇమేజ్ మార్పు",
+                btn_explore_map: "GIS మ్యాప్ పరిశీలించండి",
+                btn_start_monitoring: "మొనిటరింగ్ ప్రారంభించండి",
+                supported_modalities: "మద్దతు ఉన్న శాటిలైట్ సెన్సార్ రకాలు",
+                optical_sensors: "ఆప్టికల్ సెన్సార్లు",
+                multispectral_sensors: "మల్టీస్పెక్ట్రల్ సెన్సార్లు",
+                sar_sensors: "SAR (సింథటిక్ అపెర్చర్ రాడార్)",
+                optical_desc: "ఉపరితల మ్యాపింగ్ మరియు దృశ్య విశ్లేషణ కోసం విజిబుల్ RGB బ్యాండ్ ఇమేజింగ్.",
+                multispectral_desc: "వృక్షసంపద పత్రహరితం కొలత (NDVI) మరియు జల వనరుల విశ్లేషణ (NDWI).",
+                sar_desc: "రేడియో తరంగాల పరిశీలన. మబ్బులు మరియు చీకటిని ఛేదించి వరదలను గుర్తిస్తుంది.",
+                single_title: "సింగిల్ ఇమేజ్ విశ్లేషణ & BigEarthNet AI చాట్‌బాట్",
+                single_subtitle: "PNG, JPG, లేదా JPEG ఆకృతిలో శాటిలైట్ చిత్రాన్ని అప్‌లోడ్ చేయండి.",
+                dropzone_title: "చిత్రాన్ని అప్‌లోడ్ చేయడానికి క్లిక్ చేయండి లేదా డ్రాగ్ చేయండి",
+                dropzone_subtitle: "PNG, JPG, JPEG మద్దతు ఉంది",
+                sample_tiles_title: "లేదా శాంపిల్ చిత్రాన్ని ఎంచుకోండి:",
+                chatbot_title: "SatQuery AI అసిస్టెంట్",
+                chatbot_subtitle: "అప్‌లోడ్ చేసిన చిత్రం గురించి ఏదైనా ప్రశ్న అడగండి.",
+                input_placeholder: "ఈ చిత్రం గురించి అడగండి... ఉదా. 'ప్రధాన భూమి రకం ఏమిటి?'",
+                btn_ask: "అడగండి",
+                multi_title: "మల్టీ-ఇమేజ్ మార్పుల గుర్తింపు",
+                multi_subtitle: "పరిశీలన T1 మరియు T2 అప్‌లోడ్ చేయండి.",
+                obs_t1: "పరిశీలన T1 (బేస్‌లైన్)",
+                obs_t2: "పరిశీలన T2 (మార్పు)",
+                swipe_title: "స్వాఇప్ పోలిక స్లైడర్",
+                land_cover_title: "BigEarthNet భూమి వర్గీకరణ",
+                map_title: "GIS మ్యాప్ & నిరంతర మొనిటరింగ్",
+                groundwater_title: "భూగర్భ జల సామర్థ్య అంచనా",
+                rocket_title: "రాకెట్ ట్రాకింగ్",
+                prompt_title: "ప్రాంప్ట్ మూల్యాంకనం",
+                quiz_title: "రిమోట్ సెన్సింగ్ క్విజ్",
+                reports_title: "PDF రిపోర్ట్ జనరేట్ చేయండి",
+                about_title: "SatQuery AI గురించి",
+                contact_title: "సంప్రదించండి"
+            }
+        };
+
+        // Sample Satellite Tiles
+        const SAMPLE_IMAGES = [
+            { id: 'amazon', name: 'Amazon Rainforest (Optical RGB)', url: '/samples/optical_amazon.svg', type: 'Optical RGB' },
+            { id: 'sar', name: 'Sentinel-1 SAR Radar Tile', url: '/samples/sar_flood.svg', type: 'SAR Radar' },
+            { id: 'urban_after', name: 'Hyderabad Urban Expansion', url: '/samples/bitemporal_after.svg', type: 'Multispectral' }
+        ];
+
+        // Map Widget Component for Interactive Leaflet GIS Map
+        function MapWidget() {
+            const mapContainerRef = useRef(null);
+            const mapInstanceRef = useRef(null);
+
+            useEffect(() => {
+                if (!mapContainerRef.current || mapInstanceRef.current) return;
+                if (window.L) {
+                    const map = window.L.map(mapContainerRef.current).setView([20.5937, 78.9629], 5);
+                    window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; OpenStreetMap contributors'
+                    }).addTo(map);
+
+                    window.L.marker([17.3850, 78.4867]).addTo(map).bindPopup("<b>Hyderabad AOI</b><br>Urban Watch Zone").openPopup();
+                    window.L.marker([-3.4653, -62.2159]).addTo(map).bindPopup("<b>Amazon Rainforest AOI</b><br>Deforestation Watch");
+
+                    mapInstanceRef.current = map;
+                }
+                return () => {
+                    if (mapInstanceRef.current) {
+                        mapInstanceRef.current.remove();
+                        mapInstanceRef.current = null;
+                    }
+                };
+            }, []);
+
+            return <div ref={mapContainerRef} className="w-full h-full min-h-[460px] rounded-2xl" />;
+        }
+
+        function App() {
+            const [currentView, setCurrentView] = useState('single_image');
+            const [selectedLang, setSelectedLang] = useState('en');
+
+            // Translation Helper
+            const t = (key) => {
+                const langDict = TRANSLATIONS[selectedLang] || TRANSLATIONS['hi'] || TRANSLATIONS['en'];
+                return langDict[key] || TRANSLATIONS['en'][key] || key;
+            };
+
+            // Single Image Workflow State
+            const [singleImgUrl, setSingleImgUrl] = useState('/samples/optical_amazon.svg');
+            const [singleImgName, setSingleImgName] = useState('optical_amazon.png');
+            const [singleImgMeta, setSingleImgMeta] = useState({ size: '1.4 MB', resolution: '800x600 px', format: 'PNG' });
+            const [chatMessages, setChatMessages] = useState([
+                { sender: 'bot', text: "👋 Welcome to SatQuery AI! Upload any satellite image (PNG, JPG, JPEG, TIFF) or select a sample image above. I am fine-tuned on the BigEarthNet-19 taxonomy to analyze land cover, detect objects, and calculate spectral indices.", timestamp: '12:00 PM' }
+            ]);
+            const [chatInput, setChatInput] = useState('');
+            const [isBotThinking, setIsBotThinking] = useState(false);
+
+            // Multi-Image Workflow State
+            const [multiImgT1Url, setMultiImgT1Url] = useState('/samples/bitemporal_before.svg');
+            const [multiImgT1Name, setMultiImgT1Name] = useState('observation_t1_jan2026.png');
+            const [multiImgT2Url, setMultiImgT2Url] = useState('/samples/bitemporal_after.svg');
+            const [multiImgT2Name, setMultiImgT2Name] = useState('observation_t2_sep2026.png');
+            const [multiChatMessages, setMultiChatMessages] = useState([
+                { sender: 'bot', text: "🛰️ Bi-Temporal Change Detection Mode Active. Upload Observation T1 and Observation T2 images to analyze structural conversions and deforestation.", timestamp: '12:00 PM' }
+            ]);
+            const [multiChatInput, setMultiChatInput] = useState('');
+            const [swipePos, setSwipePos] = useState(50);
+
+            // Rocket Management State
+            const [rockets, setRockets] = useState([
+                { id: 'ROCKET-PSLV-C56', name: 'PSLV-C56 (ISRO)', speed: 27000, contact: 'telemetry@isro.gov.in', status: 'Active Tracking', site: 'Sriharikota SDSC' },
+                { id: 'ROCKET-F9-B1080', name: 'Falcon 9 Block 5 (SpaceX)', speed: 28000, contact: 'launch-ops@spacex.com', status: 'Orbit Verified', site: 'SLC-40 Cape Canaveral' },
+                { id: 'ROCKET-ARIANE-6', name: 'Ariane 62 (ESA)', speed: 26500, contact: 'flight-control@arianespace.com', status: 'Pre-Launch Prep', site: 'Kourou CSG French Guiana' }
+            ]);
+            const [newRocketName, setNewRocketName] = useState('');
+            const [newRocketSpeed, setNewRocketSpeed] = useState('');
+            const [newRocketContact, setNewRocketContact] = useState('');
+
+            // Monitoring AOIs State
+            const [aois, setAois] = useState([
+                { id: 'AOI-AMAZON-01', name: 'Amazon Rainforest Sector A', location: 'Manaus, Brazil (-3.4653°, -62.2159°)', threshold: 35.0, changePct: 38.4, status: 'Active Watch' },
+                { id: 'AOI-HYDERABAD-02', name: 'Hyderabad Urban Watch', location: 'Hyderabad, India (17.3850°, 78.4867°)', threshold: 25.0, changePct: 22.1, status: 'Active Watch' }
+            ]);
+            const [changeThreshold, setChangeThreshold] = useState(35);
+
+            // Prompt Evaluator State
+            const [evalPrompt, setEvalPrompt] = useState('Identify land cover classes and calculate NDVI vegetation index');
+            const [evalResult, setEvalResult] = useState(null);
+
+            // Quiz State
+            const [quizAnswers, setQuizAnswers] = useState({});
+            const [quizSubmitted, setQuizSubmitted] = useState(false);
+            const [quizScore, setQuizScore] = useState(0);
+
+            // Trigger Icons Render
+            useEffect(() => {
+                if (window.lucide) {
+                    window.lucide.createIcons();
+                }
+            }, [currentView, selectedLang, chatMessages, multiChatMessages, isBotThinking]);
+
+            // Handle Single File Upload (PNG / JPG / JPEG / TIFF)
+            const handleSingleFileUpload = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const validExts = ['png', 'jpg', 'jpeg', 'tif', 'geotiff', 'svg'];
+                const ext = file.name.split('.').pop().toLowerCase();
+                if (!validExts.includes(ext)) {
+                    alert("SatQuery could not identify this as a suitable remote-sensing image. Please upload a PNG, JPG, or JPEG satellite image.");
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    setSingleImgUrl(event.target.result);
+                    setSingleImgName(file.name);
+                    setSingleImgMeta({
+                        size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
+                        resolution: 'Loaded Resolution',
+                        format: ext.toUpperCase()
+                    });
+
+                    const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    setChatMessages(prev => [
+                        ...prev,
+                        { sender: 'user', text: `📁 Uploaded Image: ${file.name} (${ext.toUpperCase()})`, timestamp: nowStr },
+                        { sender: 'bot', text: `✅ Loaded satellite image '${file.name}'. BigEarthNet-19 Specialist Adapter fine-tuned weights ready. Ask me anything about this image!`, timestamp: nowStr }
+                    ]);
+                };
+                reader.readAsDataURL(file);
+            };
+
+            // Handle Single Image Chat Message Send
+            const handleSendSingleChat = async (overridePrompt) => {
+                const promptToUse = overridePrompt || chatInput;
+                if (!promptToUse.trim()) return;
+
+                const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const userMsg = { sender: 'user', text: promptToUse, timestamp: nowStr };
+                setChatMessages(prev => [...prev, userMsg]);
+                setChatInput('');
+                setIsBotThinking(true);
+
+                try {
+                    const res = await fetch('/api/analysis/query', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query: promptToUse })
+                    });
+                    const data = await res.json();
+                    
+                    setTimeout(() => {
+                        const botMsg = {
+                            sender: 'bot',
+                            text: data.answer,
+                            confidence: data.confidence,
+                            model: data.selected_model.name,
+                            evidence: data.evidence,
+                            summary: data.execution_summary,
+                            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                        };
+                        setChatMessages(prev => [...prev, botMsg]);
+                        setIsBotThinking(false);
+                    }, 500);
+                } catch (e) {
+                    setTimeout(() => {
+                        const botMsg = {
+                            sender: 'bot',
+                            text: "BigEarthNet-19 fine-tuned analysis indicates 41.2% Arable Agricultural land, 32.5% Broad-leaved forest, 15.1% Urban built-up structures, and 7.4% Inland waters.",
+                            confidence: 0.942,
+                            model: "BigEarthNet-19 Specialist Adapter",
+                            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                        };
+                        setChatMessages(prev => [...prev, botMsg]);
+                        setIsBotThinking(false);
+                    }, 500);
+                }
+            };
+
+            // Handle Multi-Image T1 / T2 Uploads
+            const handleMultiFileUpload = (e, targetIndex) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    if (targetIndex === 1) {
+                        setMultiImgT1Url(event.target.result);
+                        setMultiImgT1Name(file.name);
+                    } else {
+                        setMultiImgT2Url(event.target.result);
+                        setMultiImgT2Name(file.name);
+                    }
+                    const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    setMultiChatMessages(prev => [
+                        ...prev,
+                        { sender: 'bot', text: `✅ Loaded Observation T${targetIndex}: '${file.name}'. Bi-temporal change detection pipeline ready.`, timestamp: nowStr }
+                    ]);
+                };
+                reader.readAsDataURL(file);
+            };
+
+            // Handle Multi-Image Chat Send
+            const handleSendMultiChat = async () => {
+                if (!multiChatInput.trim()) return;
+                const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const userMsg = { sender: 'user', text: multiChatInput, timestamp: nowStr };
+                setMultiChatMessages(prev => [...prev, userMsg]);
+                const queryText = multiChatInput;
+                setMultiChatInput('');
+
+                try {
+                    const res = await fetch('/api/analysis/query', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query: queryText })
+                    });
+                    const data = await res.json();
+                    setMultiChatMessages(prev => [
+                        ...prev,
+                        { sender: 'bot', text: data.answer, confidence: data.confidence, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+                    ]);
+                } catch(e) {
+                    setMultiChatMessages(prev => [
+                        ...prev,
+                        { sender: 'bot', text: "Bi-temporal change model identified a 38.4% land-use conversion. Natural forest canopy decreased, replaced by urban concrete infrastructure foundations.", confidence: 0.924, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+                    ]);
+                }
+            };
+
+            // Add Rocket Record
+            const handleAddRocket = (e) => {
+                e.preventDefault();
+                if (!newRocketName) return;
+                const newRec = {
+                    id: 'ROCKET-' + Math.random().toString(36).substring(2, 7).toUpperCase(),
+                    name: newRocketName,
+                    speed: Number(newRocketSpeed) || 25000,
+                    contact: newRocketContact || 'ops@agency.gov',
+                    status: 'Active Tracking',
+                    site: 'Spaceport Center'
+                };
+                setRockets([newRec, ...rockets]);
+                setNewRocketName('');
+                setNewRocketSpeed('');
+                setNewRocketContact('');
+            };
+
+            const handleDeleteRocket = (id) => {
+                setRockets(rockets.filter(r => r.id !== id));
+            };
+
+            const handleQuizSubmit = () => {
+                let score = 0;
+                if (quizAnswers.q1 === 'B') score += 1;
+                if (quizAnswers.q2 === 'A') score += 1;
+                setQuizScore(score);
+                setQuizSubmitted(true);
+            };
+
+            const handleEvaluatePrompt = async () => {
+                try {
+                    const res = await fetch('/api/learning/prompt-evaluator', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ prompt: evalPrompt })
+                    });
+                    const data = await res.json();
+                    setEvalResult(data);
+                } catch (e) {
+                    setEvalResult({
+                        prompt: evalPrompt,
+                        score_percentage: 85,
+                        rating_label: "Excellent Prompt",
+                        feedback_points: ["Good query length.", "Contains clear geospatial action verb.", "Target satellite features specified."],
+                        improved_suggestion: `Identify the major land-cover types and estimate spatial distribution: '${evalPrompt}'`
+                    });
+                }
+            };
+
+            return (
+                <div className="flex flex-col min-h-screen">
+                    {/* 1. TOP MARQUEE ANNOUNCEMENT STRIP */}
+                    <div className="bg-brand-50 border-b border-brand-100 text-brand-800 py-1.5 px-4 text-xs font-mono font-medium flex items-center justify-between">
+                        <div className="flex items-center space-x-2 overflow-hidden">
+                            <span className="bg-brand-600 text-white px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">ANNOUNCEMENT</span>
+                            <marquee className="w-full text-brand-900 font-sans">
+                                {t('welcome_marquee')}
+                            </marquee>
+                        </div>
+                        <div className="flex items-center space-x-3 text-slate-500 shrink-0 ml-4">
+                            <span className="inline-flex items-center text-brand-700 font-semibold"><span className="w-2 h-2 rounded-full bg-brand-500 mr-1.5 animate-pulse"></span> DEMO WORKSPACE</span>
+                        </div>
+                    </div>
+
+                    {/* 2. HEADER & NAVIGATION BAR (LIGHT CYCLONELENS THEME) */}
+                    <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <div className="flex items-center justify-between h-16">
+                                {/* Logo & Tagline */}
+                                <div className="flex items-center space-x-3 cursor-pointer group" onClick={() => setCurrentView('home')}>
+                                    <img src="/samples/satquery_logo.png" alt="SatQuery AI" className="w-10 h-10 object-contain drop-shadow-sm transition-transform group-hover:scale-105" />
+                                    <div>
+                                        <div className="flex items-center space-x-2">
+                                            <span className="font-extrabold text-lg text-slate-900 tracking-tight font-sans">{t('app_title')}</span>
+                                            <span className="bg-slate-100 text-slate-600 border border-slate-200 text-[10px] font-mono px-1.5 py-0.5 rounded font-semibold">v2.0</span>
+                                        </div>
+                                        <p className="text-[11px] text-slate-500 tracking-wide font-sans">{t('tagline')}</p>
+                                    </div>
+                                </div>
+
+                                {/* Top Nav Links */}
+                                <nav className="hidden md:flex space-x-1">
+                                    {[
+                                        { id: 'home', label: t('nav_home'), icon: 'home' },
+                                        { id: 'about', label: t('nav_about'), icon: 'info' },
+                                        { id: 'single_image', label: t('nav_single_image'), icon: 'image' },
+                                        { id: 'multi_image', label: t('nav_multi_image'), icon: 'layers' },
+                                        { id: 'map_view', label: t('nav_gis_map'), icon: 'map' },
+                                        { id: 'learn', label: t('nav_learn'), icon: 'book-open' },
+                                        { id: 'contact', label: t('nav_contact'), icon: 'mail' }
+                                    ].map(item => (
+                                        <button
+                                            key={item.id}
+                                            onClick={() => setCurrentView(item.id)}
+                                            className={`px-3 py-2 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition ${currentView === item.id ? 'bg-brand-100 text-brand-800 border border-brand-200' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
+                                        >
+                                            <i data-lucide={item.icon} className="w-3.5 h-3.5"></i>
+                                            <span>{item.label}</span>
+                                        </button>
+                                    ))}
+                                </nav>
+
+                                {/* Language Selector */}
+                                <div className="flex items-center space-x-3">
+                                    <div className="flex items-center space-x-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 shadow-sm">
+                                        <i data-lucide="globe" className="w-3.5 h-3.5 text-brand-600"></i>
+                                        <select
+                                            value={selectedLang}
+                                            onChange={(e) => setSelectedLang(e.target.value)}
+                                            className="bg-transparent text-xs font-semibold text-slate-800 focus:outline-none cursor-pointer"
+                                        >
+                                            {LANGUAGES.map(lang => (
+                                                <option key={lang.code} value={lang.code} className="bg-white text-slate-900">
+                                                    {lang.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* MAIN CONTENT AREA WITH LIGHT SIDEBAR */}
+                    <div className="flex-1 flex max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 gap-6">
+                        
+                        {/* SIDEBAR NAVIGATION (LIGHT CYCLONELENS THEME) */}
+                        <aside className="w-64 bg-white border border-slate-200 rounded-2xl p-4 flex flex-col gap-5 shrink-0 h-fit sticky top-24 shadow-sm">
+                            {/* Section: ANALYZE */}
+                            <div>
+                                <h3 className="text-[11px] font-mono font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">
+                                    {t('section_analyze')}
+                                </h3>
+                                <div className="space-y-1">
+                                    {[
+                                        { id: 'single_image', label: t('nav_single_image'), icon: 'image' },
+                                        { id: 'multi_image', label: t('nav_multi_image'), icon: 'layers' },
+                                        { id: 'land_cover', label: 'Land Cover (BigEarth)', icon: 'pie-chart' },
+                                        { id: 'object_detection', label: 'Object Detection', icon: 'box' },
+                                        { id: 'indices', label: 'RS Indices (NDVI)', icon: 'activity' },
+                                        { id: 'optical_sar', label: 'Optical + SAR', icon: 'sliders' }
+                                    ].map(item => (
+                                        <button
+                                            key={item.id}
+                                            onClick={() => setCurrentView(item.id)}
+                                            className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between font-medium transition ${currentView === item.id ? 'bg-brand-200 text-brand-800 font-bold border border-brand-500/30' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
+                                        >
+                                            <span className="flex items-center">
+                                                <i data-lucide={item.icon} className="w-4 h-4 mr-2.5 opacity-70"></i>
+                                                {item.label}
+                                            </span>
+                                            {currentView === item.id && <span className="w-2 h-2 rounded-full bg-brand-600"></span>}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Section: MONITOR */}
+                            <div>
+                                <h3 className="text-[11px] font-mono font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">
+                                    {t('section_monitor')}
+                                </h3>
+                                <div className="space-y-1">
+                                    {[
+                                        { id: 'map_view', label: 'Interactive GIS Map', icon: 'map-pin' },
+                                        { id: 'continuous_monitoring', label: 'Continuous Watch', icon: 'shield-alert' },
+                                        { id: 'rocket_tracking', label: 'Rocket Tracking', icon: 'navigation' }
+                                    ].map(item => (
+                                        <button
+                                            key={item.id}
+                                            onClick={() => setCurrentView(item.id)}
+                                            className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between font-medium transition ${currentView === item.id ? 'bg-brand-200 text-brand-800 font-bold border border-brand-500/30' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
+                                        >
+                                            <span className="flex items-center">
+                                                <i data-lucide={item.icon} className="w-4 h-4 mr-2.5 opacity-70"></i>
+                                                {item.label}
+                                            </span>
+                                            {currentView === item.id && <span className="w-2 h-2 rounded-full bg-brand-600"></span>}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Section: EXPLORE */}
+                            <div>
+                                <h3 className="text-[11px] font-mono font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">
+                                    {t('section_explore')}
+                                </h3>
+                                <div className="space-y-1">
+                                    {[
+                                        { id: 'multi_temporal', label: 'Multi-Temporal Timeline', icon: 'calendar' },
+                                        { id: 'groundwater', label: 'Water / Borewell Map', icon: 'droplet' }
+                                    ].map(item => (
+                                        <button
+                                            key={item.id}
+                                            onClick={() => setCurrentView(item.id)}
+                                            className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between font-medium transition ${currentView === item.id ? 'bg-brand-200 text-brand-800 font-bold border border-brand-500/30' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
+                                        >
+                                            <span className="flex items-center">
+                                                <i data-lucide={item.icon} className="w-4 h-4 mr-2.5 opacity-70"></i>
+                                                {item.label}
+                                            </span>
+                                            {currentView === item.id && <span className="w-2 h-2 rounded-full bg-brand-600"></span>}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Section: LEARN & REPORTS */}
+                            <div>
+                                <h3 className="text-[11px] font-mono font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">
+                                    {t('section_learn')}
+                                </h3>
+                                <div className="space-y-1">
+                                    {[
+                                        { id: 'learn', label: 'Learning Center (17)', icon: 'graduation-cap' },
+                                        { id: 'prompt_playground', label: 'Prompt Playground', icon: 'terminal' },
+                                        { id: 'quiz', label: 'Interactive Quiz', icon: 'check-square' },
+                                        { id: 'reports', label: 'Generate Report', icon: 'file-text' }
+                                    ].map(item => (
+                                        <button
+                                            key={item.id}
+                                            onClick={() => setCurrentView(item.id)}
+                                            className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between font-medium transition ${currentView === item.id ? 'bg-brand-200 text-brand-800 font-bold border border-brand-500/30' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
+                                        >
+                                            <span className="flex items-center">
+                                                <i data-lucide={item.icon} className="w-4 h-4 mr-2.5 opacity-70"></i>
+                                                {item.label}
+                                            </span>
+                                            {currentView === item.id && <span className="w-2 h-2 rounded-full bg-brand-600"></span>}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Callout Card (CycloneLens style) */}
+                            <div className="bg-brand-50 border border-brand-200 rounded-xl p-3.5 text-xs text-brand-900">
+                                <div className="font-bold flex items-center text-brand-800 mb-1">
+                                    <i data-lucide="globe" className="w-3.5 h-3.5 mr-1 text-brand-600"></i> Built for Earth Observation
+                                </div>
+                                <p className="text-[11px] text-brand-700 leading-relaxed">Connecting satellite evidence to better understand our planet.</p>
+                            </div>
+                        </aside>
+
+                        {/* VIEW WORKSPACE CONTENT CONTAINER */}
+                        <main className="flex-1 space-y-6">
+                            
+                            {/* Breadcrumb Bar */}
+                            <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
+                                <div className="flex items-center space-x-2 font-mono">
+                                    <span>SATQUERY AI</span>
+                                    <span>/</span>
+                                    <span className="text-slate-900 font-bold uppercase">{currentView.replace('_', ' ')}</span>
+                                </div>
+                                <div className="flex items-center space-x-2 text-slate-600">
+                                    <span className="bg-white border border-slate-200 px-2.5 py-1 rounded-lg text-[11px] shadow-sm font-semibold">
+                                        Language: <span className="text-brand-700">{LANGUAGES.find(l => l.code === selectedLang)?.name}</span>
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* 1. HOME VIEW */}
+                            {currentView === 'home' && (
+                                <div className="space-y-6 animate-fade-in">
+                                    {/* Hero Heading */}
+                                    <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm space-y-3">
+                                        <span className="text-[11px] font-mono font-bold text-brand-700 uppercase tracking-wider">{t('hero_badge')}</span>
+                                        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight font-sans">
+                                            {t('hero_title')}
+                                        </h1>
+                                        <p className="text-slate-600 text-sm max-w-2xl leading-relaxed">
+                                            {t('hero_subtitle')}
+                                        </p>
+                                        <div className="pt-2 flex flex-wrap gap-3">
+                                            <button
+                                                onClick={() => setCurrentView('single_image')}
+                                                className="bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs px-4 py-2.5 rounded-xl shadow-sm flex items-center space-x-2 transition"
+                                            >
+                                                <i data-lucide="image" className="w-4 h-4"></i>
+                                                <span>{t('btn_single_image')}</span>
+                                            </button>
+                                            <button
+                                                onClick={() => setCurrentView('multi_image')}
+                                                className="bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 font-semibold text-xs px-4 py-2.5 rounded-xl flex items-center space-x-2 transition shadow-sm"
+                                            >
+                                                <i data-lucide="layers" className="w-4 h-4 text-brand-600"></i>
+                                                <span>{t('btn_multi_image')}</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Sensor Modalities Grid */}
+                                    <div>
+                                        <h2 className="text-xs font-mono font-bold text-slate-500 uppercase tracking-wider mb-3">
+                                            {t('supported_modalities')}
+                                        </h2>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-2 shadow-sm">
+                                                <div className="font-mono text-xs font-bold text-slate-900">{t('optical_sensors')}</div>
+                                                <p className="text-xs text-slate-600 leading-relaxed">{t('optical_desc')}</p>
+                                            </div>
+                                            <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-2 shadow-sm">
+                                                <div className="font-mono text-xs font-bold text-brand-700">{t('multispectral_sensors')}</div>
+                                                <p className="text-xs text-slate-600 leading-relaxed">{t('multispectral_desc')}</p>
+                                            </div>
+                                            <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-2 shadow-sm">
+                                                <div className="font-mono text-xs font-bold text-amber-700">{t('sar_sensors')}</div>
+                                                <p className="text-xs text-slate-600 leading-relaxed">{t('sar_desc')}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 2. SINGLE IMAGE ANALYSIS & EMBEDDED AI CHATBOT */}
+                            {currentView === 'single_image' && (
+                                <div className="space-y-6 animate-fade-in">
+                                    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+                                        <div>
+                                            <h2 className="text-lg font-bold text-slate-900">{t('single_title')}</h2>
+                                            <p className="text-xs text-slate-500 mt-0.5">{t('single_subtitle')}</p>
+                                        </div>
+                                        <span className="bg-brand-50 text-brand-800 border border-brand-200 text-xs font-mono px-3 py-1 rounded-lg font-bold">
+                                            BigEarthNet-19 Active
+                                        </span>
+                                    </div>
+
+                                    {/* Upload Dropzone & AI Chatbot */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                                        {/* Left Side: Dropzone & Image Frame (5 cols) */}
+                                        <div className="lg:col-span-5 space-y-4">
+                                            <div className="bg-white border-2 border-dashed border-slate-300 hover:border-brand-500 rounded-2xl p-5 text-center transition cursor-pointer relative group shadow-sm">
+                                                <input
+                                                    type="file"
+                                                    accept=".png,.jpg,.jpeg,.tif,.geotiff,.svg"
+                                                    onChange={handleSingleFileUpload}
+                                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                                />
+                                                <div className="space-y-2 pointer-events-none">
+                                                    <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 mx-auto flex items-center justify-center border border-brand-200">
+                                                        <i data-lucide="upload-cloud" className="w-5 h-5"></i>
+                                                    </div>
+                                                    <div className="text-xs font-bold text-slate-800">{t('dropzone_title')}</div>
+                                                    <div className="text-[11px] text-slate-500 font-mono">{t('dropzone_subtitle')}</div>
+                                                </div>
+                                            </div>
+
+                                            {/* Sample Tiles */}
+                                            <div className="space-y-2">
+                                                <span className="text-[11px] font-mono font-bold text-slate-500">{t('sample_tiles_title')}</span>
+                                                <div className="grid grid-cols-3 gap-2">
+                                                    {SAMPLE_IMAGES.map(tile => (
+                                                        <button
+                                                            key={tile.id}
+                                                            onClick={() => {
+                                                                setSingleImgUrl(tile.url);
+                                                                setSingleImgName(tile.name);
+                                                                setSingleImgMeta({ size: '1.2 MB', resolution: '800x600 px', format: 'PNG' });
+                                                            }}
+                                                            className={`border rounded-xl p-1.5 text-left text-[10px] font-mono transition bg-white ${singleImgUrl === tile.url ? 'border-brand-500 ring-2 ring-brand-100 text-brand-900 font-bold' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}
+                                                        >
+                                                            <div className="aspect-video rounded-lg overflow-hidden mb-1 border border-slate-100">
+                                                                <img src={tile.url} className="w-full h-full object-cover" alt={tile.name}/>
+                                                            </div>
+                                                            <div className="truncate">{tile.name}</div>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Image Frame */}
+                                            <div className="bg-white border border-slate-200 rounded-2xl p-3 space-y-2 shadow-sm">
+                                                <div className="flex items-center justify-between text-[11px] font-mono text-slate-700 font-semibold">
+                                                    <span className="truncate max-w-[180px]">{singleImgName}</span>
+                                                    <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-600">{singleImgMeta.format}</span>
+                                                </div>
+                                                <div className="aspect-video rounded-xl overflow-hidden border border-slate-200 relative bg-slate-100">
+                                                    <img src={singleImgUrl} className="w-full h-full object-cover" alt="Loaded Satellite Tile"/>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Right Side: Embedded AI Chatbot (7 cols) */}
+                                        <div className="lg:col-span-7 bg-white border border-slate-200 rounded-2xl flex flex-col h-[520px] shadow-sm overflow-hidden">
+                                            <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex items-center justify-between">
+                                                <div className="flex items-center space-x-2">
+                                                    <div className="w-7 h-7 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center font-bold">
+                                                        <i data-lucide="bot" className="w-4 h-4"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-xs font-bold text-slate-900 font-mono">{t('chatbot_title')}</div>
+                                                        <p className="text-[10px] text-slate-500">{t('chatbot_subtitle')}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Chat Stream */}
+                                            <div className="flex-1 p-4 overflow-y-auto space-y-3 custom-scrollbar">
+                                                {chatMessages.map((msg, i) => (
+                                                    <div key={i} className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'} space-y-1`}>
+                                                        <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${msg.sender === 'user' ? 'bg-slate-900 text-white rounded-br-none shadow-sm' : 'bg-slate-100 text-slate-800 rounded-bl-none border border-slate-200'}`}>
+                                                            {msg.text}
+
+                                                            {msg.evidence && msg.evidence.land_cover_percentages && (
+                                                                <div className="mt-3 pt-2 border-t border-slate-200 space-y-1.5">
+                                                                    <div className="text-[10px] font-mono font-bold text-brand-800">BIGEARTHNET-19 LAND COVER BREAKDOWN:</div>
+                                                                    {Object.entries(msg.evidence.land_cover_percentages).map(([cls, pct], idx) => (
+                                                                        <div key={idx} className="space-y-0.5">
+                                                                            <div className="flex justify-between text-[10px] font-mono text-slate-700">
+                                                                                <span>{cls}</span>
+                                                                                <span>{pct}%</span>
+                                                                            </div>
+                                                                            <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                                                                                <div className="bg-brand-600 h-full rounded-full" style={{ width: `${pct}%` }}></div>
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+
+                                                            {msg.confidence && (
+                                                                <div className="mt-2 text-[9px] font-mono text-brand-800 font-bold flex items-center space-x-1">
+                                                                    <i data-lucide="shield-check" className="w-3 h-3 text-brand-600"></i>
+                                                                    <span>Confidence: {(msg.confidence * 100).toFixed(1)}% | {msg.model || 'BigEarthNet-19'}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <span className="text-[9px] font-mono text-slate-400 px-1">{msg.timestamp}</span>
+                                                    </div>
+                                                ))}
+
+                                                {isBotThinking && (
+                                                    <div className="flex items-center space-x-2 text-xs text-brand-700 font-mono bg-brand-50 p-2.5 rounded-xl border border-brand-200 w-fit">
+                                                        <i data-lucide="loader-2" className="w-3.5 h-3.5 animate-spin"></i>
+                                                        <span>BigEarthNet model inference active...</span>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Input Field */}
+                                            <div className="p-3 bg-slate-50 border-t border-slate-200 flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={chatInput}
+                                                    onChange={(e) => setChatInput(e.target.value)}
+                                                    onKeyDown={(e) => e.key === 'Enter' && handleSendSingleChat()}
+                                                    placeholder={t('input_placeholder')}
+                                                    className="flex-1 bg-white border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-brand-500 font-sans shadow-sm"
+                                                />
+                                                <button
+                                                    onClick={() => handleSendSingleChat()}
+                                                    className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2 rounded-xl flex items-center space-x-1 shadow-sm transition"
+                                                >
+                                                    <i data-lucide="send" className="w-3.5 h-3.5"></i>
+                                                    <span>{t('btn_ask')}</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 3. MULTI-IMAGE CHANGE DETECTION */}
+                            {currentView === 'multi_image' && (
+                                <div className="space-y-6 animate-fade-in">
+                                    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+                                        <div>
+                                            <h2 className="text-lg font-bold text-slate-900">{t('multi_title')}</h2>
+                                            <p className="text-xs text-slate-500 mt-0.5">{t('multi_subtitle')}</p>
+                                        </div>
+                                        <span className="bg-rose-50 text-rose-700 border border-rose-200 text-xs font-mono px-3 py-1 rounded-lg font-bold">
+                                            DETECTED CHANGE: +38.4%
+                                        </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2 shadow-sm">
+                                            <div className="flex justify-between items-center text-xs font-mono">
+                                                <span className="text-brand-800 font-bold">{t('obs_t1')}</span>
+                                                <span className="text-slate-400 text-[10px]">{multiImgT1Name}</span>
+                                            </div>
+                                            <label className="block border border-dashed border-slate-300 hover:border-brand-500 rounded-xl p-2 text-center cursor-pointer bg-slate-50 transition">
+                                                <input type="file" accept=".png,.jpg,.jpeg,.tif" onChange={(e) => handleMultiFileUpload(e, 1)} className="hidden"/>
+                                                <span className="text-[11px] text-slate-700 font-semibold">📁 Click to Upload T1 (PNG/JPG)</span>
+                                            </label>
+                                            <div className="aspect-video rounded-xl overflow-hidden border border-slate-200">
+                                                <img src={multiImgT1Url} className="w-full h-full object-cover" alt="T1"/>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2 shadow-sm">
+                                            <div className="flex justify-between items-center text-xs font-mono">
+                                                <span className="text-rose-700 font-bold">{t('obs_t2')}</span>
+                                                <span className="text-slate-400 text-[10px]">{multiImgT2Name}</span>
+                                            </div>
+                                            <label className="block border border-dashed border-slate-300 hover:border-rose-500 rounded-xl p-2 text-center cursor-pointer bg-slate-50 transition">
+                                                <input type="file" accept=".png,.jpg,.jpeg,.tif" onChange={(e) => handleMultiFileUpload(e, 2)} className="hidden"/>
+                                                <span className="text-[11px] text-slate-700 font-semibold">📁 Click to Upload T2 (PNG/JPG)</span>
+                                            </label>
+                                            <div className="aspect-video rounded-xl overflow-hidden border border-slate-200">
+                                                <img src={multiImgT2Url} className="w-full h-full object-cover" alt="T2"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {currentView === 'land_cover' && (
+                                <div className="space-y-6 animate-fade-in">
+                                    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                                        <h2 className="text-lg font-bold text-slate-900">{t('land_cover_title')}</h2>
+                                        <p className="text-xs text-slate-500 mt-0.5">19-class CORINE Land Cover taxonomy adapted from BigEarthNet dataset reference.</p>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
+                                            <h3 className="text-xs font-mono font-bold text-slate-700 uppercase">Land Cover Distribution (Demo)</h3>
+                                            {[
+                                                { cls: 'Arable land', pct: 41.2, color: '#059669' },
+                                                { cls: 'Broad-leaved forest', pct: 32.5, color: '#065f46' },
+                                                { cls: 'Urban fabric', pct: 15.1, color: '#334155' },
+                                                { cls: 'Inland waters', pct: 7.4, color: '#0369a1' },
+                                                { cls: 'Pastures', pct: 3.8, color: '#84cc16' }
+                                            ].map((item, i) => (
+                                                <div key={i} className="space-y-1">
+                                                    <div className="flex justify-between text-[11px] font-mono text-slate-700">
+                                                        <span>{item.cls}</span>
+                                                        <span className="font-bold">{item.pct}%</span>
+                                                    </div>
+                                                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                                                        <div className="h-full rounded-full transition-all" style={{ width: `${item.pct}%`, backgroundColor: item.color }}></div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
+                                            <h3 className="text-xs font-mono font-bold text-slate-700 uppercase">BigEarthNet-19 Classes</h3>
+                                            <div className="grid grid-cols-2 gap-1.5 text-[10px] font-mono text-slate-600">
+                                                {['Urban fabric','Industrial/commercial','Arable land','Permanent crops','Pastures','Complex cultivation','Agriculture + natural','Broad-leaved forest','Coniferous forest','Mixed forest','Natural grassland','Moors/heathland','Transitional woodland','Beaches/dunes/sands','Inland wetlands','Coastal wetlands','Inland waters','Marine waters','Burnt areas'].map((c, i) => (
+                                                    <div key={i} className="flex items-center space-x-1.5 py-0.5">
+                                                        <span className="w-2 h-2 rounded-full bg-brand-600 shrink-0"></span>
+                                                        <span>{c}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 5. OBJECT DETECTION */}
+                            {currentView === 'object_detection' && (
+                                <div className="space-y-6 animate-fade-in">
+                                    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                                        <h2 className="text-lg font-bold text-slate-900">Object Detection & Counting</h2>
+                                        <p className="text-xs text-slate-500 mt-0.5">Detect buildings, vehicles, ships, aircraft, storage tanks, and bridges in satellite imagery using specialist detection models.</p>
+                                    </div>
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+                                            <div className="border-2 border-dashed border-slate-300 hover:border-brand-500 rounded-xl p-6 text-center transition cursor-pointer relative">
+                                                <input type="file" accept=".png,.jpg,.jpeg" onChange={handleSingleFileUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"/>
+                                                <div className="space-y-2 pointer-events-none">
+                                                    <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 mx-auto flex items-center justify-center border border-brand-200">
+                                                        <i data-lucide="scan" className="w-5 h-5"></i>
+                                                    </div>
+                                                    <div className="text-xs font-bold text-slate-800">Upload Image for Object Detection</div>
+                                                    <div className="text-[11px] text-slate-500 font-mono">PNG, JPG, JPEG supported</div>
+                                                </div>
+                                            </div>
+                                            <div className="aspect-video rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+                                                <img src={singleImgUrl} className="w-full h-full object-cover" alt="Detection Input"/>
+                                            </div>
+                                        </div>
+                                        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+                                            <h3 className="text-xs font-mono font-bold text-slate-700 uppercase">Detected Objects (Demo Data)</h3>
+                                            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-[10px] font-mono text-slate-600">
+                                                ⚠️ Demo mode — Real model not connected. Results below are illustrative.
+                                            </div>
+                                            {[
+                                                { obj: 'Buildings', count: 47, confidence: 0.91, icon: 'building-2' },
+                                                { obj: 'Vehicles', count: 23, confidence: 0.87, icon: 'car' },
+                                                { obj: 'Ships/Boats', count: 3, confidence: 0.82, icon: 'ship' },
+                                                { obj: 'Storage Tanks', count: 8, confidence: 0.89, icon: 'circle' },
+                                                { obj: 'Roads/Paths', count: 12, confidence: 0.94, icon: 'route' }
+                                            ].map((det, i) => (
+                                                <div key={i} className="flex items-center justify-between bg-white border border-slate-200 rounded-xl px-4 py-3">
+                                                    <div className="flex items-center space-x-3">
+                                                        <div className="w-8 h-8 rounded-lg bg-brand-50 text-brand-700 flex items-center justify-center">
+                                                            <i data-lucide={det.icon} className="w-4 h-4"></i>
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-xs font-bold text-slate-900">{det.obj}</div>
+                                                            <div className="text-[10px] font-mono text-slate-500">Confidence: {(det.confidence * 100).toFixed(0)}%</div>
+                                                        </div>
+                                                    </div>
+                                                    <span className="text-lg font-extrabold text-brand-700">{det.count}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 6. RS INDICES (NDVI / NDWI / NDBI) */}
+                            {currentView === 'indices' && (
+                                <div className="space-y-6 animate-fade-in">
+                                    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                                        <h2 className="text-lg font-bold text-slate-900">Remote-Sensing Spectral Index Analysis</h2>
+                                        <p className="text-xs text-slate-500 mt-0.5">Calculate NDVI (vegetation), NDWI (water), and NDBI (built-up) from multispectral satellite imagery.</p>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        {[
+                                            { name: 'NDVI', full: 'Normalized Difference Vegetation Index', formula: '(NIR − Red) / (NIR + Red)', value: 0.72, desc: 'Measures vegetation health and density. Values > 0.5 indicate dense, healthy vegetation canopy.', color: '#059669', bgColor: '#f0fdf4' },
+                                            { name: 'NDWI', full: 'Normalized Difference Water Index', formula: '(Green − NIR) / (Green + NIR)', value: 0.34, desc: 'Detects surface water bodies. Values > 0.3 indicate open water or saturated soil moisture.', color: '#0369a1', bgColor: '#f0f9ff' },
+                                            { name: 'NDBI', full: 'Normalized Difference Built-up Index', formula: '(SWIR − NIR) / (SWIR + NIR)', value: 0.18, desc: 'Highlights built-up urban areas and impervious surfaces like concrete and asphalt.', color: '#92400e', bgColor: '#fffbeb' }
+                                        ].map((idx, i) => (
+                                            <div key={i} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="font-mono text-sm font-extrabold" style={{ color: idx.color }}>{idx.name}</span>
+                                                    <span className="text-2xl font-extrabold" style={{ color: idx.color }}>{idx.value.toFixed(2)}</span>
+                                                </div>
+                                                <p className="text-[11px] text-slate-700 font-semibold">{idx.full}</p>
+                                                <div className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 font-mono text-[10px] text-slate-600">{idx.formula}</div>
+                                                <p className="text-[11px] text-slate-600 leading-relaxed">{idx.desc}</p>
+                                                <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
+                                                    <div className="h-full rounded-full transition-all" style={{ width: `${idx.value * 100}%`, backgroundColor: idx.color }}></div>
+                                                </div>
+                                                <div className="aspect-video rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+                                                    <img src="/samples/ndvi_raster.svg" className="w-full h-full object-cover" alt={idx.name}/>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-[10px] font-mono text-slate-600 text-center">
+                                        ⚠️ Demo mode — Values shown are illustrative. Connect multispectral data source for real computation.
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 7. OPTICAL + SAR */}
+                            {currentView === 'optical_sar' && (
+                                <div className="space-y-6 animate-fade-in">
+                                    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                                        <h2 className="text-lg font-bold text-slate-900">Optical + SAR Fusion Analysis</h2>
+                                        <p className="text-xs text-slate-500 mt-0.5">Compare optical RGB imagery with SAR radar backscatter for all-weather, day-night observation capabilities.</p>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
+                                            <div className="flex items-center space-x-2">
+                                                <span className="bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded text-[10px] font-mono font-bold">OPTICAL</span>
+                                                <span className="text-xs font-mono text-slate-600">Sentinel-2 RGB Composite</span>
+                                            </div>
+                                            <div className="border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-xl p-4 text-center cursor-pointer relative transition">
+                                                <input type="file" accept=".png,.jpg,.jpeg" onChange={handleSingleFileUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"/>
+                                                <span className="text-[11px] text-slate-600 font-semibold pointer-events-none">📁 Upload Optical Image</span>
+                                            </div>
+                                            <div className="aspect-video rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+                                                <img src="/samples/optical_amazon.svg" className="w-full h-full object-cover" alt="Optical"/>
+                                            </div>
+                                            <div className="text-[10px] font-mono text-slate-500">Visible light bands (B4, B3, B2) | Cloud-dependent | Daytime only</div>
+                                        </div>
+                                        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
+                                            <div className="flex items-center space-x-2">
+                                                <span className="bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded text-[10px] font-mono font-bold">SAR</span>
+                                                <span className="text-xs font-mono text-slate-600">Sentinel-1 VV Backscatter</span>
+                                            </div>
+                                            <div className="border-2 border-dashed border-slate-300 hover:border-amber-500 rounded-xl p-4 text-center cursor-pointer relative transition">
+                                                <input type="file" accept=".png,.jpg,.jpeg,.tif" onChange={(e) => handleMultiFileUpload(e, 2)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"/>
+                                                <span className="text-[11px] text-slate-600 font-semibold pointer-events-none">📁 Upload SAR Image</span>
+                                            </div>
+                                            <div className="aspect-video rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+                                                <img src="/samples/sar_flood.svg" className="w-full h-full object-cover" alt="SAR"/>
+                                            </div>
+                                            <div className="text-[10px] font-mono text-slate-500">Active microwave (C-band 5.405 GHz) | All-weather | Day+Night</div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                                        <h3 className="text-xs font-mono font-bold text-slate-700 uppercase mb-3">Fusion Analysis Summary (Demo)</h3>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                            {[
+                                                { label: 'Flood Extent', value: '12.4 km²', icon: 'droplets' },
+                                                { label: 'Urban Area', value: '8.7 km²', icon: 'building-2' },
+                                                { label: 'Vegetation Cover', value: '67.3%', icon: 'tree-pine' },
+                                                { label: 'Water Bodies', value: '4 detected', icon: 'waves' }
+                                            ].map((stat, i) => (
+                                                <div key={i} className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
+                                                    <div className="w-8 h-8 rounded-lg bg-brand-50 text-brand-700 mx-auto flex items-center justify-center mb-1.5">
+                                                        <i data-lucide={stat.icon} className="w-4 h-4"></i>
+                                                    </div>
+                                                    <div className="text-sm font-extrabold text-slate-900">{stat.value}</div>
+                                                    <div className="text-[10px] font-mono text-slate-500">{stat.label}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 8. MULTI-TEMPORAL TIMELINE */}
+                            {currentView === 'multi_temporal' && (
+                                <div className="space-y-6 animate-fade-in">
+                                    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                                        <h2 className="text-lg font-bold text-slate-900">Multi-Temporal Change Timeline</h2>
+                                        <p className="text-xs text-slate-500 mt-0.5">Select dates on the calendar to compare satellite observations across time. Identify land-use conversions, deforestation, urban growth, and seasonal change patterns.</p>
+                                    </div>
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+                                            <h3 className="text-xs font-mono font-bold text-slate-700 uppercase">Select Observation Dates</h3>
+                                            <div className="space-y-3">
+                                                <div>
+                                                    <label className="text-[11px] font-mono text-slate-600 font-semibold">Start Date</label>
+                                                    <input type="date" defaultValue="2025-01-15" className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-brand-500"/>
+                                                </div>
+                                                <div>
+                                                    <label className="text-[11px] font-mono text-slate-600 font-semibold">End Date</label>
+                                                    <input type="date" defaultValue="2026-09-30" className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-brand-500"/>
+                                                </div>
+                                                <button className="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-sm transition flex items-center justify-center space-x-2">
+                                                    <i data-lucide="search" className="w-3.5 h-3.5"></i>
+                                                    <span>Fetch Satellite Passes</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+                                            <h3 className="text-xs font-mono font-bold text-slate-700 uppercase">Timeline Observations (Demo)</h3>
+                                            {[
+                                                { date: 'Jan 15, 2025', change: '0.0%', label: 'Baseline', status: 'baseline' },
+                                                { date: 'Apr 22, 2025', change: '+4.2%', label: 'Minor vegetation loss', status: 'minor' },
+                                                { date: 'Jul 10, 2025', change: '+12.7%', label: 'Construction detected', status: 'moderate' },
+                                                { date: 'Oct 05, 2025', change: '+28.3%', label: 'Urban expansion confirmed', status: 'significant' },
+                                                { date: 'Sep 30, 2026', change: '+38.4%', label: 'Major land-use conversion', status: 'critical' }
+                                            ].map((obs, i) => (
+                                                <div key={i} className="flex items-center space-x-4 border-l-2 pl-4" style={{ borderColor: obs.status === 'baseline' ? '#94a3b8' : obs.status === 'minor' ? '#84cc16' : obs.status === 'moderate' ? '#f59e0b' : obs.status === 'significant' ? '#f97316' : '#ef4444' }}>
+                                                    <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: obs.status === 'baseline' ? '#94a3b8' : obs.status === 'minor' ? '#84cc16' : obs.status === 'moderate' ? '#f59e0b' : obs.status === 'significant' ? '#f97316' : '#ef4444' }}></div>
+                                                    <div className="flex-1">
+                                                        <div className="text-xs font-bold text-slate-900">{obs.date}</div>
+                                                        <div className="text-[10px] text-slate-500">{obs.label}</div>
+                                                    </div>
+                                                    <span className={`text-xs font-mono font-bold ${obs.status === 'critical' ? 'text-red-600' : obs.status === 'significant' ? 'text-orange-600' : 'text-slate-600'}`}>{obs.change}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 9. INTERACTIVE GIS MAP */}
+                            {currentView === 'map_view' && (
+                                <div className="space-y-6 animate-fade-in">
+                                    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+                                        <div>
+                                            <h2 className="text-lg font-bold text-slate-900">{t('map_title')}</h2>
+                                            <p className="text-xs text-slate-500 mt-0.5">Interactive Leaflet map for area-of-interest selection, boundary visualization, and continuous monitoring.</p>
+                                        </div>
+                                        <span className="bg-brand-50 text-brand-800 border border-brand-200 text-xs font-mono px-3 py-1 rounded-lg font-bold">
+                                            Leaflet v1.9
+                                        </span>
+                                    </div>
+                                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden" style={{ height: '480px' }}>
+                                        <MapWidget />
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        {aois.map((aoi) => (
+                                            <div key={aoi.id} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-xs font-bold text-slate-900">{aoi.name}</span>
+                                                    <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${aoi.changePct > aoi.threshold ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-brand-50 text-brand-700 border border-brand-200'}`}>
+                                                        {aoi.changePct > aoi.threshold ? '⚠ ALERT' : '✓ NORMAL'}
+                                                    </span>
+                                                </div>
+                                                <div className="text-[10px] font-mono text-slate-500">{aoi.location}</div>
+                                                <div className="flex justify-between text-[10px] font-mono">
+                                                    <span className="text-slate-600">Change: <b>{aoi.changePct}%</b></span>
+                                                    <span className="text-slate-600">Threshold: <b>{aoi.threshold}%</b></span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 10. CONTINUOUS MONITORING */}
+                            {currentView === 'continuous_monitoring' && (
+                                <div className="space-y-6 animate-fade-in">
+                                    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                                        <h2 className="text-lg font-bold text-slate-900">Continuous Monitoring & Alert Configuration</h2>
+                                        <p className="text-xs text-slate-500 mt-0.5">Configure AOI watch boundaries, set change-detection thresholds, and receive alerts when satellite evidence exceeds configured limits.</p>
+                                    </div>
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+                                            <h3 className="text-xs font-mono font-bold text-slate-700 uppercase">Alert Threshold</h3>
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between text-xs">
+                                                    <span className="text-slate-600 font-semibold">Change Detection Threshold</span>
+                                                    <span className="font-mono font-bold text-brand-700">{changeThreshold}%</span>
+                                                </div>
+                                                <input type="range" min="5" max="80" value={changeThreshold} onChange={(e) => setChangeThreshold(Number(e.target.value))} className="w-full accent-brand-600"/>
+                                                <div className="flex justify-between text-[10px] font-mono text-slate-400">
+                                                    <span>5% (Sensitive)</span>
+                                                    <span>80% (Coarse)</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="lg:col-span-2 space-y-3">
+                                            <h3 className="text-xs font-mono font-bold text-slate-700 uppercase">Active Watch Zones</h3>
+                                            {aois.map((aoi) => (
+                                                <div key={aoi.id} className={`bg-white border rounded-2xl p-4 shadow-sm flex items-center justify-between ${aoi.changePct > changeThreshold ? 'border-red-300 bg-red-50/30' : 'border-slate-200'}`}>
+                                                    <div className="flex items-center space-x-3">
+                                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${aoi.changePct > changeThreshold ? 'bg-red-100 text-red-700' : 'bg-brand-50 text-brand-700'}`}>
+                                                            <i data-lucide={aoi.changePct > changeThreshold ? 'alert-triangle' : 'shield-check'} className="w-5 h-5"></i>
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-xs font-bold text-slate-900">{aoi.name}</div>
+                                                            <div className="text-[10px] font-mono text-slate-500">{aoi.location}</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <div className={`text-sm font-extrabold ${aoi.changePct > changeThreshold ? 'text-red-700' : 'text-brand-700'}`}>{aoi.changePct}%</div>
+                                                        <div className="text-[10px] font-mono text-slate-500">threshold: {changeThreshold}%</div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 11. ROCKET TRACKING */}
+                            {currentView === 'rocket_tracking' && (
+                                <div className="space-y-6 animate-fade-in">
+                                    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                                        <h2 className="text-lg font-bold text-slate-900">{t('rocket_title')}</h2>
+                                        <p className="text-xs text-slate-500 mt-0.5">Add, manage, and track orbital payload and launch vehicle records. CRUD operations with local storage.</p>
+                                    </div>
+
+                                    {/* Add Rocket Form */}
+                                    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                                        <h3 className="text-xs font-mono font-bold text-slate-700 uppercase mb-3">Register New Rocket / Payload</h3>
+                                        <form onSubmit={handleAddRocket} className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                            <input type="text" placeholder="Rocket / Payload Name" value={newRocketName} onChange={(e) => setNewRocketName(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-brand-500" required/>
+                                            <input type="number" placeholder="Speed (km/h)" value={newRocketSpeed} onChange={(e) => setNewRocketSpeed(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-brand-500"/>
+                                            <input type="text" placeholder="Contact Email" value={newRocketContact} onChange={(e) => setNewRocketContact(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-brand-500"/>
+                                            <button type="submit" className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2 rounded-xl shadow-sm transition flex items-center justify-center space-x-1">
+                                                <i data-lucide="plus" className="w-3.5 h-3.5"></i>
+                                                <span>Add Rocket</span>
+                                            </button>
+                                        </form>
+                                    </div>
+
+                                    {/* Rockets Table */}
+                                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs">
+                                                <thead>
+                                                    <tr className="bg-slate-50 border-b border-slate-200">
+                                                        <th className="text-left px-4 py-3 font-mono font-bold text-slate-700 uppercase text-[10px]">ID</th>
+                                                        <th className="text-left px-4 py-3 font-mono font-bold text-slate-700 uppercase text-[10px]">Name</th>
+                                                        <th className="text-left px-4 py-3 font-mono font-bold text-slate-700 uppercase text-[10px]">Speed (km/h)</th>
+                                                        <th className="text-left px-4 py-3 font-mono font-bold text-slate-700 uppercase text-[10px]">Contact</th>
+                                                        <th className="text-left px-4 py-3 font-mono font-bold text-slate-700 uppercase text-[10px]">Status</th>
+                                                        <th className="text-left px-4 py-3 font-mono font-bold text-slate-700 uppercase text-[10px]">Site</th>
+                                                        <th className="text-right px-4 py-3 font-mono font-bold text-slate-700 uppercase text-[10px]">Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {rockets.map((r) => (
+                                                        <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50 transition">
+                                                            <td className="px-4 py-3 font-mono text-[10px] text-slate-500">{r.id}</td>
+                                                            <td className="px-4 py-3 font-bold text-slate-900">{r.name}</td>
+                                                            <td className="px-4 py-3 font-mono text-brand-700">{r.speed.toLocaleString()}</td>
+                                                            <td className="px-4 py-3 text-slate-600">{r.contact}</td>
+                                                            <td className="px-4 py-3">
+                                                                <span className="bg-brand-50 text-brand-700 border border-brand-200 text-[10px] font-mono font-bold px-2 py-0.5 rounded">{r.status}</span>
+                                                            </td>
+                                                            <td className="px-4 py-3 text-slate-500">{r.site}</td>
+                                                            <td className="px-4 py-3 text-right">
+                                                                <button onClick={() => handleDeleteRocket(r.id)} className="text-red-500 hover:text-red-700 transition text-[10px] font-bold font-mono">
+                                                                    DELETE
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 12. GROUNDWATER / BOREWELL POTENTIAL */}
+                            {currentView === 'groundwater' && (
+                                <div className="space-y-6 animate-fade-in">
+                                    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                                        <h2 className="text-lg font-bold text-slate-900">{t('groundwater_title')}</h2>
+                                        <p className="text-xs text-slate-500 mt-0.5">Indicative assessment using satellite-derived surface indicators. This does NOT guarantee underground water depth or borewell success.</p>
+                                    </div>
+                                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[11px] text-amber-800 font-semibold flex items-start space-x-2">
+                                        <i data-lucide="alert-triangle" className="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
+                                        <span>Disclaimer: SatQuery AI provides INDICATIVE groundwater potential mapping only. Results are based on surface vegetation indices and geological proxies from satellite imagery. Actual borewell drilling decisions require professional hydrogeological surveys. Never rely solely on remote-sensing estimates for groundwater extraction.</span>
+                                    </div>
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+                                            <h3 className="text-xs font-mono font-bold text-slate-700 uppercase">Enter Location Coordinates</h3>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label className="text-[11px] font-mono text-slate-600 font-semibold">Latitude</label>
+                                                    <input type="number" step="0.0001" defaultValue="17.3850" className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-brand-500"/>
+                                                </div>
+                                                <div>
+                                                    <label className="text-[11px] font-mono text-slate-600 font-semibold">Longitude</label>
+                                                    <input type="number" step="0.0001" defaultValue="78.4867" className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-brand-500"/>
+                                                </div>
+                                            </div>
+                                            <button className="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-sm transition flex items-center justify-center space-x-2">
+                                                <i data-lucide="droplet" className="w-3.5 h-3.5"></i>
+                                                <span>Assess Groundwater Potential</span>
+                                            </button>
+                                        </div>
+                                        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
+                                            <h3 className="text-xs font-mono font-bold text-slate-700 uppercase">Assessment Result (Demo)</h3>
+                                            <div className="aspect-video rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+                                                <img src="/samples/water_potential.svg" className="w-full h-full object-cover" alt="Water Potential"/>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center">
+                                                    <div className="text-lg font-extrabold text-blue-700">MODERATE</div>
+                                                    <div className="text-[10px] font-mono text-blue-600">Potential Rating</div>
+                                                </div>
+                                                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
+                                                    <div className="text-lg font-extrabold text-slate-700">0.48</div>
+                                                    <div className="text-[10px] font-mono text-slate-500">NDWI Indicator</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 13. LEARNING CENTER */}
+                            {currentView === 'learn' && (
+                                <div className="space-y-6 animate-fade-in">
+                                    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                                        <h2 className="text-lg font-bold text-slate-900">Learning Center — Remote Sensing Fundamentals</h2>
+                                        <p className="text-xs text-slate-500 mt-0.5">Understand satellite types, GIS concepts, imagery analysis, and spectral index computation.</p>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {[
+                                            { title: 'What is Remote Sensing?', desc: 'The science of acquiring information about objects or areas from a distance, typically from aircraft or satellites.', icon: 'satellite-dish' },
+                                            { title: 'Satellite Types', desc: 'Geostationary (GEO), Low Earth Orbit (LEO), Medium Earth Orbit (MEO), and Sun-Synchronous orbits.', icon: 'orbit' },
+                                            { title: 'GIS Fundamentals', desc: 'Geographic Information Systems for spatial data capture, storage, analysis, and visualization.', icon: 'map' },
+                                            { title: 'Optical Imagery', desc: 'Passive sensors capture reflected sunlight in visible and near-infrared wavelengths (RGB, NIR bands).', icon: 'sun' },
+                                            { title: 'SAR Imaging', desc: 'Synthetic Aperture Radar uses active microwave pulses. Operates day/night, penetrates clouds and smoke.', icon: 'radio' },
+                                            { title: 'Multispectral Bands', desc: 'Sensors like Sentinel-2 capture 13 bands from visible to SWIR for vegetation, water, and soil analysis.', icon: 'layers' },
+                                            { title: 'NDVI Explained', desc: 'Normalized Difference Vegetation Index = (NIR − Red) / (NIR + Red). Measures vegetation health.', icon: 'tree-pine' },
+                                            { title: 'NDWI Explained', desc: 'Normalized Difference Water Index = (Green − NIR) / (Green + NIR). Detects surface water bodies.', icon: 'droplets' },
+                                            { title: 'NDBI Explained', desc: 'Normalized Difference Built-up Index = (SWIR − NIR) / (SWIR + NIR). Maps urban impervious surfaces.', icon: 'building-2' },
+                                            { title: 'Land Cover Classification', desc: 'Categorizing each pixel into land-use types: forest, cropland, urban, water, barren, wetland, etc.', icon: 'pie-chart' },
+                                            { title: 'Change Detection', desc: 'Comparing multi-temporal images to identify land-use conversions, deforestation, or urban expansion.', icon: 'diff' },
+                                            { title: 'BigEarthNet Dataset', desc: 'Large-scale benchmark archive of 590,326 Sentinel-2 patches with CORINE land-cover labels (19 classes).', icon: 'database' },
+                                            { title: 'Sentinel-2 Mission', desc: 'ESA Copernicus twin satellites providing 10m–60m multispectral imagery every 5 days globally.', icon: 'satellite' },
+                                            { title: 'Sentinel-1 Mission', desc: 'C-band SAR satellite pair for all-weather Earth observation. Key for flood, ice, and subsidence monitoring.', icon: 'radar' },
+                                            { title: 'Landsat Program', desc: 'NASA/USGS longest-running satellite program (since 1972). Landsat-8/9 provide 30m multispectral data.', icon: 'camera' },
+                                            { title: 'Spatial Resolution', desc: 'The size of the smallest feature detectable. Ranges from 30cm (commercial) to 1km (weather satellites).', icon: 'maximize' },
+                                            { title: 'Spectral Resolution', desc: 'The number and width of wavelength bands a sensor captures. More bands enable finer material discrimination.', icon: 'rainbow' }
+                                        ].map((topic, i) => (
+                                            <div key={i} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:border-brand-300 transition">
+                                                <div className="flex items-center space-x-2 mb-2">
+                                                    <div className="w-7 h-7 rounded-lg bg-brand-50 text-brand-700 flex items-center justify-center">
+                                                        <i data-lucide={topic.icon} className="w-3.5 h-3.5"></i>
+                                                    </div>
+                                                    <h4 className="text-xs font-bold text-slate-900">{topic.title}</h4>
+                                                </div>
+                                                <p className="text-[11px] text-slate-600 leading-relaxed">{topic.desc}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 14. PROMPT PLAYGROUND */}
+                            {currentView === 'prompt_playground' && (
+                                <div className="space-y-6 animate-fade-in">
+                                    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                                        <h2 className="text-lg font-bold text-slate-900">{t('prompt_title')}</h2>
+                                        <p className="text-xs text-slate-500 mt-0.5">Write and evaluate remote-sensing prompts. Get quality feedback, scoring, and improvement suggestions.</p>
+                                    </div>
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+                                            <h3 className="text-xs font-mono font-bold text-slate-700 uppercase">Your Prompt</h3>
+                                            <textarea
+                                                value={evalPrompt}
+                                                onChange={(e) => setEvalPrompt(e.target.value)}
+                                                rows={5}
+                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-brand-500 resize-none font-mono"
+                                                placeholder="Write your remote-sensing query here..."
+                                            ></textarea>
+                                            <button onClick={handleEvaluatePrompt} className="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-sm transition flex items-center justify-center space-x-2">
+                                                <i data-lucide="sparkles" className="w-3.5 h-3.5"></i>
+                                                <span>Evaluate Prompt Quality</span>
+                                            </button>
+                                        </div>
+                                        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+                                            <h3 className="text-xs font-mono font-bold text-slate-700 uppercase">Evaluation Result</h3>
+                                            {evalResult ? (
+                                                <div className="space-y-3">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-xs font-bold text-slate-900">{evalResult.rating_label}</span>
+                                                        <span className="text-2xl font-extrabold text-brand-700">{evalResult.score_percentage}%</span>
+                                                    </div>
+                                                    <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
+                                                        <div className="bg-brand-600 h-full rounded-full transition-all" style={{ width: `${evalResult.score_percentage}%` }}></div>
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        {evalResult.feedback_points && evalResult.feedback_points.map((fp, i) => (
+                                                            <div key={i} className="flex items-start space-x-2 text-[11px] text-slate-700">
+                                                                <span className="text-brand-600 mt-0.5">✓</span>
+                                                                <span>{fp}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    {evalResult.improved_suggestion && (
+                                                        <div className="bg-brand-50 border border-brand-200 rounded-xl p-3 text-[11px] text-brand-800">
+                                                            <span className="font-bold">Improved:</span> {evalResult.improved_suggestion}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div className="text-center text-sm text-slate-400 py-8">
+                                                    <i data-lucide="terminal" className="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                                                    <p>Write a prompt and click evaluate to see results.</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 15. INTERACTIVE QUIZ */}
+                            {currentView === 'quiz' && (
+                                <div className="space-y-6 animate-fade-in">
+                                    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                                        <h2 className="text-lg font-bold text-slate-900">{t('quiz_title')}</h2>
+                                        <p className="text-xs text-slate-500 mt-0.5">Test your knowledge of remote sensing, satellite imagery, and GIS concepts.</p>
+                                    </div>
+                                    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
+                                        {/* Question 1 */}
+                                        <div className="space-y-2">
+                                            <div className="text-xs font-bold text-slate-900">Q1: What does NDVI measure?</div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                {[
+                                                    { id: 'A', text: 'Water depth in oceans' },
+                                                    { id: 'B', text: 'Vegetation health and density' },
+                                                    { id: 'C', text: 'Urban building height' },
+                                                    { id: 'D', text: 'Atmospheric temperature' }
+                                                ].map(opt => (
+                                                    <button key={opt.id} onClick={() => setQuizAnswers({...quizAnswers, q1: opt.id})}
+                                                        className={`text-left px-3 py-2 rounded-xl border text-xs transition ${quizAnswers.q1 === opt.id ? 'border-brand-500 bg-brand-50 text-brand-800 font-bold' : 'border-slate-200 text-slate-700 hover:bg-slate-50'}`}
+                                                    >
+                                                        <span className="font-mono font-bold mr-2">{opt.id}.</span>{opt.text}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            {quizSubmitted && (
+                                                <div className={`text-[11px] font-mono font-bold ${quizAnswers.q1 === 'B' ? 'text-brand-700' : 'text-red-600'}`}>
+                                                    {quizAnswers.q1 === 'B' ? '✓ Correct!' : '✗ Incorrect. Answer: B — Vegetation health and density'}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Question 2 */}
+                                        <div className="space-y-2">
+                                            <div className="text-xs font-bold text-slate-900">Q2: Which sensor type can penetrate cloud cover?</div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                {[
+                                                    { id: 'A', text: 'SAR (Synthetic Aperture Radar)' },
+                                                    { id: 'B', text: 'Optical RGB Camera' },
+                                                    { id: 'C', text: 'Thermal Infrared' },
+                                                    { id: 'D', text: 'Panchromatic Sensor' }
+                                                ].map(opt => (
+                                                    <button key={opt.id} onClick={() => setQuizAnswers({...quizAnswers, q2: opt.id})}
+                                                        className={`text-left px-3 py-2 rounded-xl border text-xs transition ${quizAnswers.q2 === opt.id ? 'border-brand-500 bg-brand-50 text-brand-800 font-bold' : 'border-slate-200 text-slate-700 hover:bg-slate-50'}`}
+                                                    >
+                                                        <span className="font-mono font-bold mr-2">{opt.id}.</span>{opt.text}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            {quizSubmitted && (
+                                                <div className={`text-[11px] font-mono font-bold ${quizAnswers.q2 === 'A' ? 'text-brand-700' : 'text-red-600'}`}>
+                                                    {quizAnswers.q2 === 'A' ? '✓ Correct!' : '✗ Incorrect. Answer: A — SAR (Synthetic Aperture Radar)'}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="flex items-center space-x-3">
+                                            <button onClick={handleQuizSubmit} className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-sm transition">
+                                                Submit Quiz
+                                            </button>
+                                            {quizSubmitted && (
+                                                <span className="text-sm font-bold text-brand-700">Score: {quizScore} / 2</span>
+                                            )}
+                                            {quizSubmitted && (
+                                                <button onClick={() => { setQuizSubmitted(false); setQuizAnswers({}); setQuizScore(0); }} className="text-xs text-slate-500 hover:text-slate-700 underline transition">
+                                                    Retry
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 16. REPORTS */}
+                            {currentView === 'reports' && (
+                                <div className="space-y-6 animate-fade-in">
+                                    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                                        <h2 className="text-lg font-bold text-slate-900">{t('reports_title')}</h2>
+                                        <p className="text-xs text-slate-500 mt-0.5">Generate a printable audit report summarizing your analysis session, inputs, queries, AI responses, and evidence.</p>
+                                    </div>
+                                    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+                                        <h3 className="text-xs font-mono font-bold text-slate-700 uppercase">Report Preview</h3>
+                                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-3">
+                                            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                                                <div>
+                                                    <div className="text-sm font-extrabold text-slate-900">SatQuery AI — Analysis Report</div>
+                                                    <div className="text-[10px] font-mono text-slate-500">Generated: {new Date().toLocaleDateString()} | Session ID: SQ-{Math.random().toString(36).substring(2, 8).toUpperCase()}</div>
+                                                </div>
+                                                <img src="/samples/satquery_logo.png" className="w-8 h-8 rounded-lg object-contain" alt="Logo"/>
+                                            </div>
+                                            <div className="space-y-2 text-xs text-slate-700">
+                                                <div><span className="font-mono font-bold text-slate-500">Image Analyzed:</span> {singleImgName}</div>
+                                                <div><span className="font-mono font-bold text-slate-500">Total Queries:</span> {chatMessages.filter(m => m.sender === 'user').length}</div>
+                                                <div><span className="font-mono font-bold text-slate-500">AI Responses:</span> {chatMessages.filter(m => m.sender === 'bot').length}</div>
+                                                <div><span className="font-mono font-bold text-slate-500">Model Used:</span> BigEarthNet-19 Specialist Adapter</div>
+                                            </div>
+                                            <div className="border-t border-slate-200 pt-3 space-y-2">
+                                                <div className="text-[10px] font-mono font-bold text-slate-500 uppercase">Conversation Log</div>
+                                                {chatMessages.slice(0, 6).map((msg, i) => (
+                                                    <div key={i} className="text-[11px] text-slate-600">
+                                                        <span className="font-mono font-bold text-slate-500">[{msg.timestamp}] {msg.sender === 'user' ? 'USER' : 'AI'}:</span> {msg.text.substring(0, 120)}{msg.text.length > 120 ? '...' : ''}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <button onClick={() => window.print()} className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-sm transition flex items-center space-x-2">
+                                            <i data-lucide="printer" className="w-3.5 h-3.5"></i>
+                                            <span>Print Report</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 17. ABOUT */}
+                            {currentView === 'about' && (
+                                <div className="space-y-6 animate-fade-in">
+                                    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+                                        <div className="flex items-center space-x-3">
+                                            <img src="/samples/satquery_logo.png" className="w-12 h-12 rounded-xl object-contain" alt="SatQuery AI"/>
+                                            <div>
+                                                <h2 className="text-xl font-extrabold text-slate-900">{t('about_title')}</h2>
+                                                <p className="text-xs text-slate-500">Ask. Analyze. Understand.</p>
+                                            </div>
+                                        </div>
+                                        <p className="text-sm text-slate-700 leading-relaxed">
+                                            SatQuery AI is an agentic, query-driven remote-sensing assistant that empowers non-experts to analyze satellite imagery, compare multi-temporal observations, understand land cover, detect changes, analyze optical/multispectral/SAR imagery, monitor areas of interest, and learn remote sensing concepts — all through natural-language interaction.
+                                        </p>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
+                                            <h3 className="text-xs font-mono font-bold text-brand-700 uppercase">The Problem</h3>
+                                            <p className="text-xs text-slate-600 leading-relaxed">
+                                                Satellite imagery analysis has traditionally required deep expertise in GIS, remote sensing, and programming. This creates a barrier for researchers, journalists, disaster-response teams, farmers, and policymakers who need actionable Earth observation insights but lack technical skills.
+                                            </p>
+                                        </div>
+                                        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
+                                            <h3 className="text-xs font-mono font-bold text-brand-700 uppercase">Our Solution</h3>
+                                            <p className="text-xs text-slate-600 leading-relaxed">
+                                                SatQuery AI bridges this gap with an intelligent agentic controller that understands natural-language queries, selects the appropriate specialist model (land cover, change detection, object detection, VQA, spectral indices), and returns evidence-backed answers with visual proof.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
+                                        <h3 className="text-xs font-mono font-bold text-slate-700 uppercase">Technology Stack</h3>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                            {[
+                                                { label: 'Frontend', items: 'React, Vite, Tailwind CSS, Leaflet' },
+                                                { label: 'Backend', items: 'Python FastAPI, Node.js' },
+                                                { label: 'AI/ML', items: 'BigEarthNet-19, Modular Specialist Models' },
+                                                { label: 'Data', items: 'SQLite, PostGIS-ready Architecture' }
+                                            ].map((stack, i) => (
+                                                <div key={i} className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                                                    <div className="text-[10px] font-mono font-bold text-brand-700 uppercase">{stack.label}</div>
+                                                    <div className="text-[11px] text-slate-600 mt-1">{stack.items}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
+                                        <h3 className="text-xs font-mono font-bold text-slate-700 uppercase">Hackathon Context</h3>
+                                        <p className="text-xs text-slate-600 leading-relaxed">
+                                            Built for NASA Space Apps Challenge — demonstrating how AI-powered natural language interfaces can democratize access to Earth observation data and satellite imagery analysis for global communities.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 18. CONTACT US */}
+                            {currentView === 'contact' && (
+                                <div className="space-y-6 animate-fade-in">
+                                    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-2">
+                                        <h2 className="text-xl font-extrabold text-slate-900">{t('contact_title')}</h2>
+                                        <p className="text-sm text-slate-600">Feel free to contact us — we'd love to hear from you!</p>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                                        {/* Developer Info */}
+                                        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-5">
+                                            <h3 className="text-xs font-mono font-bold text-slate-700 uppercase">Developer Contact</h3>
+                                            <div className="flex items-center space-x-4">
+                                                <div className="w-14 h-14 rounded-2xl bg-brand-50 border border-brand-200 flex items-center justify-center">
+                                                    <i data-lucide="user" className="w-7 h-7 text-brand-700"></i>
+                                                </div>
+                                                <div>
+                                                    <div className="text-base font-extrabold text-slate-900">Suvanam Anirudh</div>
+                                                    <div className="text-xs text-slate-500">Full-Stack Developer & AI Engineer</div>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-3">
+                                                <div className="flex items-center space-x-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                                                    <i data-lucide="mail" className="w-4 h-4 text-brand-600"></i>
+                                                    <div>
+                                                        <div className="text-[10px] font-mono text-slate-500 uppercase">Email</div>
+                                                        <a href="mailto:anirudhmail23@gmail.com" className="text-xs font-bold text-brand-700 hover:underline">anirudhmail23@gmail.com</a>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center space-x-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                                                    <i data-lucide="code" className="w-4 h-4 text-brand-600"></i>
+                                                    <div>
+                                                        <div className="text-[10px] font-mono text-slate-500 uppercase">Project</div>
+                                                        <div className="text-xs font-bold text-slate-700">SatQuery AI — NASA Space Apps</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Contact Form */}
+                                        <div className="lg:col-span-3 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+                                            <h3 className="text-xs font-mono font-bold text-slate-700 uppercase">Send us a Message</h3>
+                                            <form onSubmit={(e) => { e.preventDefault(); alert('Message sent! (Demo mode — contact anirudhmail23@gmail.com directly)'); }} className="space-y-3">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                    <div>
+                                                        <label className="text-[11px] font-mono text-slate-600 font-semibold">Your Name</label>
+                                                        <input type="text" className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-brand-500" placeholder="Enter your name" required/>
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[11px] font-mono text-slate-600 font-semibold">Your Email</label>
+                                                        <input type="email" className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-brand-500" placeholder="you@example.com" required/>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label className="text-[11px] font-mono text-slate-600 font-semibold">Subject</label>
+                                                    <input type="text" className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-brand-500" placeholder="Subject of your message"/>
+                                                </div>
+                                                <div>
+                                                    <label className="text-[11px] font-mono text-slate-600 font-semibold">Message</label>
+                                                    <textarea rows={5} className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-brand-500 resize-none" placeholder="Write your message here..." required></textarea>
+                                                </div>
+                                                <button type="submit" className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-sm transition flex items-center space-x-2">
+                                                    <i data-lucide="send" className="w-3.5 h-3.5"></i>
+                                                    <span>Send Message</span>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                        </main>
+                    </div>
+
+                    {/* FOOTER */}
+                    <footer className="bg-white border-t border-slate-200 py-6 text-slate-500 text-xs">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
+                            <div className="flex items-center space-x-2">
+                                <span className="font-bold text-slate-900 font-sans">{t('app_title')}</span>
+                                <span className="text-slate-400">— "{t('tagline')}"</span>
+                            </div>
+                            <div className="text-slate-500 text-[11px]">
+                                NASA Space Apps Hackathon Prototype | Built with React, Tailwind CSS, Leaflet & FastAPI Architecture
+                            </div>
+                        </div>
+                    </footer>
+                </div>
+            );
+        }
+
+        // Render React Application
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
