@@ -141,7 +141,7 @@ const server = http.createServer((req, res) => {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
             status: 'online',
-            app: 'SatQuery AI',
+            app: 'Semantic Retrieval AI',
             tagline: 'Ask. Analyze. Understand.',
             timestamp: new Date().toISOString()
         }));
@@ -390,7 +390,7 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, () => {
     console.log(`\n==================================================`);
-    console.log(`🚀 SATQUERY AI FULL-STACK SERVER ONLINE`);
+    console.log(`🚀 SEMANTIC RETRIEVAL AI FULL-STACK SERVER ONLINE`);
     console.log(`   "Ask. Analyze. Understand."`);
     console.log(`--------------------------------------------------`);
     console.log(`🌐 Application URL: http://localhost:${PORT}`);
