@@ -1,23 +1,23 @@
-# SATQUERY AI — Agentic Remote-Sensing Assistant
+# SEMANTIC RETRIEVAL AI — Agentic Remote-Sensing Assistant
 
 > **Tagline:** *"Ask. Analyze. Understand."*  
 > **Domain:** NASA Space Apps / Advanced Remote-Sensing AI Web Application  
-> **Status:** Production-Ready Full-Stack Prototype
+> **Status:** Production-Ready Full-Stack Prototype & Vercel Edge Compatible
 
 ---
 
 ## 1. Executive Summary & Design Philosophy
 
-**SatQuery AI** is an agentic, query-driven remote-sensing assistant that enables experts and non-experts to analyze satellite imagery, perform multi-temporal change detection, process optical/multispectral/SAR imagery, continuously monitor areas of interest (AOIs), assess indicative groundwater potential, and learn Earth observation concepts via natural language interaction.
+**Semantic Retrieval AI** is an agentic, query-driven remote-sensing assistant that enables experts and non-experts to analyze satellite imagery, perform multi-temporal change detection, process optical/multispectral/SAR imagery, continuously monitor areas of interest (AOIs), assess indicative groundwater potential, and learn Earth observation concepts via natural language interaction.
 
 ### Visual & Design Principles
 - **Aesthetics:** Serious scientific geospatial product design. Restrained, human-crafted UI inspired by earth, forest, ocean, satellite imagery, and topographic maps.
 - **Color Palette:**
-  - **Primary Base:** Deep Navy (`#0B132B`, `#1C2541`) & Slate (`#3A506B`, `#475569`)
-  - **Surface / Background:** Soft Scientific Light Gray (`#F4F6F9`, `#FFFFFF`)
-  - **Accents:** Muted Forest Green (`#2D6A4F`), Muted Ocean Blue (`#014F86`), Warm Earth (`#D4A373`)
-  - **Prohibitions:** ZERO fluorescent/neon colors, no cyberpunk styling, no excessive glassmorphism, no fake AI pulse animations, and no generic "AI SaaS" templates.
-- **Header Strip:** Styled announcement strip featuring `<marquee>` with *"Welcome to SatQuery AI"*.
+  - **Primary Base:** Deep Slate & Clean White (`#F4F6F5`, `#FFFFFF`)
+  - **Surface / Background:** Soft Scientific Canvas (`#F8FAF9`, `#F4F6F5`)
+  - **Accents:** Muted Emerald Green (`#059669`, `#10B981`), Ocean Blue (`#0369A1`), Earth Amber (`#D97706`)
+  - **Prohibitions:** ZERO fluorescent/neon colors, no cyberpunk styling, no excessive glassmorphism, no fake AI pulse animations, and no generic templates.
+- **Header Strip:** Styled announcement strip featuring `<marquee>` with *"Welcome to Semantic Retrieval AI"*.
 
 ---
 
