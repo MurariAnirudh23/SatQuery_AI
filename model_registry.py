@@ -213,3 +213,4 @@ class SpecialistModelRegistry:
                 "Generated pseudo-color heat map raster and threshold legend"
             ]
         }
+
